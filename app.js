@@ -12,10 +12,12 @@
       payment: 'Mode of Transaction', paymentSub: 'Choose how you would like to pay.',
       upi: 'UPI', card: 'Card Transaction', scanPay: 'Scan to Pay', scanSub: 'Use any UPI app to scan this QR code.',
       insertCard: 'Tap or insert your card', cardSub: 'Follow the instructions on the card terminal beside the screen.',
+      timeRemaining: 'Time Remaining ·', simulateUpi: 'Simulate payment received', simulateCard: 'Simulate card approved',
       verifying: 'Verifying payment…', paymentVerified: 'Payment Verified', paymentComplete: 'Your payment was successful.',
       getSms: 'Get SMS', printBill: 'Print Bill', tutorial: 'Tutorial', tutorialSub: 'A quick guide before you begin.',
       chooseNozzle: 'Choose the nozzle', nozzleSub: 'Take the highlighted nozzle from the pump.',
       petrolNozzle: 'PETROL nozzle', dieselNozzle: 'DIESEL nozzle',
+      nozzleLifted: 'Nozzle lifted',
       fuelling: 'Fuelling in progress', placeNozzle: 'Place the nozzle in your tank and press the clutch.',
       complete: 'Fuelling complete', replaceNozzle: 'Please place the nozzle back on the pump.', done: 'Done', restart: 'Start another transaction',
       back: 'Back', next: 'Next', skip: 'Skip tutorial', continue: 'Continue', step: 'Step'
@@ -30,10 +32,12 @@
       payment: 'भुगतान का तरीका', paymentSub: 'भुगतान करने का तरीका चुनें।',
       upi: 'यूपीआई', card: 'कार्ड भुगतान', scanPay: 'स्कैन करके भुगतान करें', scanSub: 'किसी भी UPI ऐप से QR कोड स्कैन करें।',
       insertCard: 'कार्ड टैप या डालें', cardSub: 'स्क्रीन के पास कार्ड मशीन के निर्देशों का पालन करें।',
+      timeRemaining: 'शेष समय ·', simulateUpi: 'भुगतान प्राप्त दिखाएँ', simulateCard: 'कार्ड भुगतान स्वीकार करें',
       verifying: 'भुगतान जाँचा जा रहा है…', paymentVerified: 'भुगतान सफल', paymentComplete: 'आपका भुगतान सफल रहा।',
       getSms: 'SMS पाएँ', printBill: 'बिल प्रिंट करें', tutorial: 'ट्यूटोरियल', tutorialSub: 'शुरू करने से पहले छोटा सा निर्देश।',
       chooseNozzle: 'नोज़ल चुनें', nozzleSub: 'पंप से चमकता हुआ नोज़ल उठाएँ।',
       petrolNozzle: 'पेट्रोल नोज़ल', dieselNozzle: 'डीज़ल नोज़ल',
+      nozzleLifted: 'नोज़ल उठा लिया',
       fuelling: 'ईंधन भरा जा रहा है', placeNozzle: 'नोज़ल टैंक में रखें और लीवर दबाएँ।',
       complete: 'ईंधन भर गया', replaceNozzle: 'कृपया नोज़ल वापस पंप पर रखें।', done: 'पूरा हुआ', restart: 'नया लेन-देन',
       back: 'पीछे', next: 'आगे', skip: 'ट्यूटोरियल छोड़ें', continue: 'जारी रखें', step: 'चरण'
@@ -50,9 +54,11 @@
     return 3500;
   };
   const targetLitres = () => state.fill === 'litres' ? Number(state.value || 0) : targetAmount() / (state.fuel === 'diesel' ? 89 : 97);
-  const currency = n => `₹${Math.round(Number(n || 0)).toLocaleString('en-IN')}`;
+  const localDigits = value => state.lang === 'hi' ? String(value).replace(/\d/g, d => '०१२३४५६७८९'[Number(d)]) : String(value);
+  const currency = n => `₹${localDigits(Math.round(Number(n || 0)).toLocaleString('en-IN'))}`;
+  const litres = n => `${localDigits(Number(n || 0).toFixed(2))} ${state.lang === 'hi' ? 'ली' : 'L'}`;
   const head = title => `<div class="screen-head"><h1>${title}</h1></div>`;
-  const actions = (nextDisabled = false, nextLabel = t('next')) => `<div class="action-row"><button class="nav-button" data-action="back" aria-label="${t('back')}" ${state.step === 'language' ? 'disabled' : ''}>‹</button><button class="primary-button" data-action="next" ${nextDisabled ? 'disabled' : ''}>${nextLabel}</button></div>`;
+  const actions = (nextDisabled = false, nextLabel = t('next')) => `<div class="action-row">${state.step === 'language' ? '' : `<button class="nav-button" data-action="back" aria-label="${t('back')}">‹</button>`}<button class="primary-button" data-action="next" ${nextDisabled ? 'disabled' : ''}>${nextLabel}</button></div>`;
 
   function render() {
     clearInterval(state.timer);
@@ -67,7 +73,7 @@
   function language() {
     return `${head(t('selectLanguage'))}<div class="choices language-grid">
       <button class="choice-button ${state.lang === 'en' ? 'selected' : ''}" data-select="lang" data-value="en"><strong>English</strong></button>
-      <button class="choice-button lime ${state.lang === 'hi' ? 'selected' : ''}" data-select="lang" data-value="hi"><strong>हिन्दी</strong></button>
+      <button class="choice-button ${state.lang === 'hi' ? 'selected' : ''}" data-select="lang" data-value="hi"><strong>हिन्दी</strong></button>
     </div>${actions(!state.lang)}`;
   }
 
@@ -90,13 +96,13 @@
       const presets = state.fill === 'amount' ? [100,200,500,1000,2000,3000] : [1,2,5,10,20,30];
       const label = state.fill === 'amount' ? t('chooseAmount') : t('enterLitres');
       return `${head(label)}<div class="choices amount-presets">
-        ${presets.map(v => `<button class="choice-button" data-action="preset" data-value="${v}">${state.fill === 'amount' ? currency(v) : `${v} L`}</button>`).join('')}
+        ${presets.map(v => `<button class="choice-button" data-action="preset" data-value="${v}">${state.fill === 'amount' ? currency(v) : `${localDigits(v)} ${state.lang === 'hi' ? 'ली' : 'L'}`}</button>`).join('')}
         <button class="choice-button lime" data-action="custom">${t('customAmount')}</button>
       </div><div class="action-row"><button class="nav-button" data-action="back" aria-label="${t('back')}">‹</button></div>`;
     }
-    const displayValue = state.fill === 'amount' ? currency(state.value) : `${state.value || '0'} L`;
+    const displayValue = state.fill === 'amount' ? currency(state.value) : `${localDigits(state.value || '0')} ${state.lang === 'hi' ? 'ली' : 'L'}`;
     return `${head(state.fill === 'amount' ? t('enterAmount') : t('enterLitres'))}<div class="display"><strong>${displayValue}</strong></div>
-      <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(v => `<button class="key" data-action="key" data-value="${v}">${v}</button>`).join('')}<button class="key erase" data-action="erase" aria-label="Delete">⌫</button><button class="key zero" data-action="key" data-value="0">0</button></div>
+      <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(v => `<button class="key" data-action="key" data-value="${v}">${localDigits(v)}</button>`).join('')}<button class="key erase" data-action="erase" aria-label="${state.lang === 'hi' ? 'मिटाएँ' : 'Delete'}">⌫</button><button class="key zero" data-action="key" data-value="0">${localDigits(0)}</button></div>
       ${actions(Number(state.value) <= 0 || (state.fill === 'amount' && Number(state.value) < 50),t('continue'))}`;
   }
 
@@ -120,36 +126,40 @@
 
   function pay() {
     const amount = currency(targetAmount());
-    const paymentVisual = state.payment === 'upi'
-      ? `<div class="qr-panel"><div class="timer-line"><span>Time remaining · <strong id="timeLeft">4:59</strong></span><span class="timer-track"><span class="timer-fill" id="timerFill"></span></span></div>${qrMarkup()}</div>`
-      : `<div class="card-panel"><div class="card-icon pulse"></div><h2>${t('insertCard')}</h2><button class="primary-button dark" data-action="simulate-payment">Simulate card approved</button></div>`;
-    return `${head(state.payment === 'upi' ? t('scanPay') : t('insertCard'))}<div class="payment-layout">${paymentVisual}<div class="summary-box"><h2>${amount}</h2><p>${fuelLabel()}</p>${state.payment === 'upi' ? '<button class="primary-button dark" data-action="simulate-payment">Simulate payment received</button>' : ''}<p class="subhead" id="paymentStatus"></p></div></div><div class="action-row"><button class="nav-button" data-action="back" aria-label="${t('back')}">‹</button></div>`;
+    if (state.payment === 'upi') {
+      return `${head(t('scanPay'))}<div class="scan-layout"><div class="timer-line scan-timer"><span>${t('timeRemaining')} <strong id="timeLeft">${localDigits('4:59')}</strong></span><span class="timer-track"><span class="timer-fill" id="timerFill"></span></span></div><div class="qr-panel">${qrMarkup()}</div><div class="scan-total">${amount} · ${fuelLabel()}</div><button class="primary-button dark" data-action="simulate-payment">${t('simulateUpi')}</button><p class="subhead" id="paymentStatus"></p></div><div class="action-row"><button class="nav-button" data-action="back" aria-label="${t('back')}">‹</button></div>`;
+    }
+    return `${head(t('insertCard'))}<div class="card-panel payment-card"><div class="card-icon pulse"></div><h2>${amount} · ${fuelLabel()}</h2><button class="primary-button dark" data-action="simulate-payment">${t('simulateCard')}</button><p class="subhead" id="paymentStatus"></p></div><div class="action-row"><button class="nav-button" data-action="back" aria-label="${t('back')}">‹</button></div>`;
   }
 
   function verified() {
-    return `<div class="success-screen"><div class="success-badge"><span>✓</span></div><h1>${t('paymentVerified')}</h1><p class="subhead">${currency(targetAmount())} · ${fuelLabel()}<br>${t('paymentComplete')}</p><div class="receipt-actions"><button class="primary-button" data-action="sms">${t('getSms')}</button><button class="primary-button" data-action="print">${t('printBill')}</button></div><button class="primary-button" style="margin-top:18px" data-action="next">${t('continue')}</button></div>`;
+    return `<div class="success-screen"><div class="success-badge"><span>✓</span></div><h1>${t('paymentVerified')}</h1><p class="verified-meta">${currency(targetAmount())} · ${fuelLabel()}</p><div class="receipt-actions"><button class="primary-button" data-action="sms">${t('getSms')}</button><button class="primary-button" data-action="print">${t('printBill')}</button></div><button class="primary-button continue-button" data-action="next">${t('continue')}</button></div>`;
   }
 
-  const tutorialSlides = [
-    ['⛽','Choose the highlighted nozzle','The correct nozzle will blink on the pump.'],
-    ['↘','Insert the nozzle fully','Push it into your vehicle tank until secure.'],
-    ['✋','Press and hold the lever','Fuelling stops automatically at your selected value.']
-  ];
   function tutorial() {
+    const tutorialSlides = state.lang === 'hi' ? [
+      ['⛽','चमकता हुआ नोज़ल चुनें','सही नोज़ल पंप पर चमकेगा।'],
+      ['↘','नोज़ल पूरा अंदर डालें','इसे वाहन के टैंक में सुरक्षित रूप से लगाएँ।'],
+      ['✋','लीवर दबाकर रखें','चुनी हुई मात्रा पर ईंधन अपने आप रुक जाएगा।']
+    ] : [
+      ['⛽','Choose the highlighted nozzle','The correct nozzle will blink on the pump.'],
+      ['↘','Insert the nozzle fully','Push it into your vehicle tank until secure.'],
+      ['✋','Press and hold the lever','Fuelling stops automatically at your selected value.']
+    ];
     const [icon,title,body] = tutorialSlides[state.tutorialIndex];
-    return `${head(t('tutorial'))}<div class="tutorial-panel"><div class="tutorial-visual"><div><div class="pump-symbol">${icon}</div><strong>${title}</strong></div></div><div class="tutorial-copy"><strong>${state.tutorialIndex + 1}. ${title}</strong><p>${body}</p><div class="tutorial-dots">${tutorialSlides.map((_,i)=>`<i class="${i===state.tutorialIndex?'active':''}"></i>`).join('')}</div></div></div><div class="action-row"><button class="link-button" data-action="skip">${t('skip')}</button><button class="primary-button" data-action="tutorial-next">${state.tutorialIndex === 2 ? t('continue') : t('next')}</button></div>`;
+    return `${head(t('tutorial'))}<div class="tutorial-panel" role="region" aria-roledescription="carousel" aria-label="${t('tutorial')}"><div class="tutorial-visual"><div><div class="pump-symbol">${icon}</div><strong>${title}</strong></div></div><div class="tutorial-copy"><strong>${localDigits(state.tutorialIndex + 1)}. ${title}</strong><p>${body}</p><div class="tutorial-dots">${tutorialSlides.map((_,i)=>`<i class="${i===state.tutorialIndex?'active':''}"></i>`).join('')}</div></div></div><div class="action-row"><button class="link-button" data-action="skip">${t('skip')}</button><button class="primary-button" data-action="tutorial-next">${state.tutorialIndex === 2 ? t('continue') : t('next')}</button></div>`;
   }
 
   function nozzle() {
-    return `${head(t('chooseNozzle'))}<div class="nozzle-grid"><div class="nozzle ${state.fuel === 'petrol' ? 'active' : ''}"><div><span class="nozzle-icon">⛽</span><strong>${t('petrolNozzle')}</strong></div></div><div class="nozzle ${state.fuel === 'diesel' ? 'active' : ''}"><div><span class="nozzle-icon">⛽</span><strong>${t('dieselNozzle')}</strong></div></div></div><div class="action-row"><button class="primary-button dark" data-action="next">Nozzle lifted</button></div>`;
+    return `${head(t('chooseNozzle'))}<div class="nozzle-grid"><div class="nozzle ${state.fuel === 'petrol' ? 'active' : ''}"><div><span class="nozzle-icon">⛽</span><strong>${t('petrolNozzle')}</strong></div></div><div class="nozzle ${state.fuel === 'diesel' ? 'active' : ''}"><div><span class="nozzle-icon">⛽</span><strong>${t('dieselNozzle')}</strong></div></div></div><div class="action-row"><button class="primary-button dark" data-action="next">${t('nozzleLifted')}</button></div>`;
   }
 
   function fuelling() {
-    return `${head(t('fuelling'))}<div class="fuel-panel"><div class="live-amount" id="liveAmount">₹0</div><div class="live-litres" id="liveLitres">0.00 L</div><div class="progress-shell"><div class="progress-bar" id="fuelBar" style="--progress:0%"></div></div><p class="instruction">${t('placeNozzle')}</p></div>`;
+    return `${head(t('fuelling'))}<div class="fuel-panel"><div class="live-amount" id="liveAmount">${currency(0)}</div><div class="live-litres" id="liveLitres">${litres(0)}</div><div class="progress-shell"><div class="progress-bar" id="fuelBar" style="--progress:0%"></div></div><p class="instruction">${t('placeNozzle')}</p></div>`;
   }
 
   function complete() {
-    return `<div class="complete-screen"><div class="complete-card"><div class="check-circle">✓</div><h1>${t('complete')}</h1><p class="subhead">${t('replaceNozzle')}</p><div class="final-amount">${currency(targetAmount())}</div><strong>${targetLitres().toFixed(2)} L · ${fuelLabel()}</strong><br><button class="primary-button dark" data-action="restart">${t('done')}</button></div><button class="link-button" style="margin-top:24px" data-action="restart">${t('restart')}</button></div>`;
+    return `<div class="complete-screen"><div class="complete-card"><div class="check-circle">✓</div><h1>${t('complete')}</h1><p class="subhead">${t('replaceNozzle')}</p><div class="final-amount">${currency(targetAmount())}</div><strong>${litres(targetLitres())} · ${fuelLabel()}</strong><br><button class="primary-button dark" data-action="restart">${t('done')}</button></div><button class="link-button" style="margin-top:24px" data-action="restart">${t('restart')}</button></div>`;
   }
 
   function next() {
@@ -169,7 +179,7 @@
       seconds--;
       const label = document.querySelector('#timeLeft');
       const fill = document.querySelector('#timerFill');
-      if (label) label.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+      if (label) label.textContent = localDigits(`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`);
       if (fill) fill.style.width = `${seconds/299*100}%`;
     },1000);
   }
@@ -195,7 +205,7 @@
       const litreEl = document.querySelector('#liveLitres');
       const bar = document.querySelector('#fuelBar');
       if (amountEl) amountEl.textContent = currency(a);
-      if (litreEl) litreEl.textContent = `${l.toFixed(2)} L`;
+      if (litreEl) litreEl.textContent = litres(l);
       if (bar) bar.style.setProperty('--progress',`${eased*100}%`);
       if (pct < 1) requestAnimationFrame(tick);
       else setTimeout(() => { if (state.step === 'fuelling') { state.step='complete'; render(); } },700);
@@ -237,9 +247,24 @@
     if (action === 'restart') restart();
   });
 
+  let swipeStartX = null;
+  document.addEventListener('pointerdown', e => {
+    if (e.target.closest('.tutorial-panel')) swipeStartX = e.clientX;
+  });
+  document.addEventListener('pointerup', e => {
+    if (swipeStartX === null || !e.target.closest('.tutorial-panel')) { swipeStartX = null; return; }
+    const distance = e.clientX - swipeStartX;
+    swipeStartX = null;
+    if (Math.abs(distance) < 48) return;
+    if (distance < 0 && state.tutorialIndex < 2) state.tutorialIndex++;
+    if (distance > 0 && state.tutorialIndex > 0) state.tutorialIndex--;
+    render();
+  });
+  document.addEventListener('pointercancel', () => { swipeStartX = null; });
+
   window.fuelFlow = {
     startTransaction: ({language='en', fuel='petrol', fillBy='amount', value=500, payment='upi'}={}) => {
-      Object.assign(state,{lang:language,fuel,fill:fillBy,value:String(value),payment,step:'pay'}); render();
+      Object.assign(state,{lang:language,fuel,fill:fillBy,value:String(value),payment,tutorialIndex:0,step:'pay'}); render();
       return {status:'ready_for_payment', amount:targetAmount(), fuel};
     },
     reset: restart,
